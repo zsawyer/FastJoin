@@ -1,0 +1,6 @@
+name        = "FastJoin"
+source_dir  = "source"
+output_dir  = "output"
+description = [=[This mod shortens the update delay for auto joining server from 10 seconds to 1 second.]=]
+image       = "fastjoin.jpg"
+publish_id = "179abe23"
