@@ -29,20 +29,7 @@ Script.Load("lua/HitSounds.lua")
 
 -- FastJoin edit <<START>>
 local kAutoJoinUpdateDelay = 1 // default is 10
-local FastJoin_InfoText = "FastJoin modded delay set to " .. kAutoJoinUpdateDelay
-DebugPrint(FastJoin_InfoText) 
-
-local reloadingSound = "sound/NS2.fev/common/ping"
-Client.PrecacheLocalSound(reloadingSound)
-function playReloading()    
-    MenuManager.PlaySound(reloadingSound)    
-end
-
-local joiningSound = "sound/NS2.fev/common/countdown"
-Client.PrecacheLocalSound(joiningSound)
-function playJoining()
-    MenuManager.PlaySound(joiningSound)    
-end
+Script.Load("lua/FastJoin/FastJoin.lua")
 -- FastJoin edit <<END>>
 
 local kMainMenuLinkColor = Color(137 / 255, 137 / 255, 137 / 255, 1)
@@ -127,7 +114,7 @@ function GUIMainMenu:Initialize()
 
     Shared.Message("Main Menu Initialized at Version: " .. Shared.GetBuildNumber())
     Shared.Message("Steam Id: " .. Client.GetSteamId())    
-    Shared.Message(FastJoin_InfoText) -- FastJoin edit
+    FastJoin.init(kAutoJoinUpdateDelay) -- FastJoin edit
     --provides a set of functions required for window handling
     AddMenuMixin(self)
     self:SetCursor("ui/Cursor_MenuDefault.dds")
@@ -2948,14 +2935,14 @@ function GUIMainMenu:Update(deltaTime)
         if self.updateAutoJoin then
             
             if not self.timeLastAutoJoinUpdate or self.timeLastAutoJoinUpdate + kAutoJoinUpdateDelay < Shared.GetTime() then -- FastJoin edit
-                Shared.Message("Server refreshed (" .. Shared.GetTime() .. ")") -- FastJoin edit
-                playReloading() -- FastJoin edit
+                FastJoin.debug("Server refreshed (" .. Shared.GetTime() .. ")") -- FastJoin edit
+                FastJoin.playReloading() -- FastJoin edit
                 Client.RefreshServer(MainMenu_GetSelectedServer())
                 
                 if MainMenu_GetSelectedIsFull() then
                     self.timeLastAutoJoinUpdate = Shared.GetTime()
                 else
-                    playJoining() -- FastJoin edit
+                    FastJoin.playJoining() -- FastJoin edit
                     MainMenu_JoinSelected()
                     self.autoJoinWindow:SetIsVisible(false)
                     
