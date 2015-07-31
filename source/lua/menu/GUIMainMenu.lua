@@ -59,6 +59,9 @@ local kParticleQualityModes  = { "low", "high" }
 local kRenderDevices         = Client.GetRenderDeviceNames()
 local kRenderDeviceDisplayNames = {}
 
+local menuBackgroundList = {}
+local menuMusicList = {}
+
 for i = 1, #kRenderDevices do
     local name = kRenderDevices[i]
     if name == "D3D11" or name == "OpenGL" then
@@ -84,8 +87,9 @@ local kLocales =
         { name = "plPL", label = "Polish" },
         { name = "ptBR", label = "Portuguese" },
         { name = "ruRU", label = "Russian" },
+        { name = "rsRS", label = "Serbian" },
         { name = "esES", label = "Spanish" },
-        { name = "seSW", label = "Swedish" }
+        { name = "swSW", label = "Swedish" }
     }    
 
 local gMainMenu
@@ -110,7 +114,7 @@ end
 
 function GUIMainMenu:Initialize()
 
-    GUIAnimatedScript.Initialize(self)
+    GUIAnimatedScript.Initialize(self, 0)
 
     Shared.Message("Main Menu Initialized at Version: " .. Shared.GetBuildNumber())
     Shared.Message("Steam Id: " .. Client.GetSteamId())
@@ -126,7 +130,7 @@ function GUIMainMenu:Initialize()
     self.mainWindow:SetCSSClass("main_frame")
     
     self.tvGlareImage = CreateMenuElement(self.mainWindow, "Image")
-    
+
     if MainMenu_IsInGame() then
         self.tvGlareImage:SetCSSClass("tvglare_dark")
         self.tvGlareImage:SetIsVisible(false)
@@ -151,6 +155,9 @@ function GUIMainMenu:Initialize()
     
     self.openedWindows = 0
     self.numMods = 0
+    
+    menuBackgroundList = MainMenu_GetMenuBackgrounds()
+    menuMusicList = MainMenu_GetMusicList()
     
     local eventCallbacks =
     {
@@ -363,7 +370,7 @@ function GUIMainMenu:CreateMenuBackground()
 
     self.menuBackground = CreateMenuElement(self.mainWindow, "Image")
     self.menuBackground:SetCSSClass("menu_bg_show")
-    
+
 end
 
 function GUIMainMenu:CreateProfile()
@@ -1378,6 +1385,8 @@ GUIMainMenu.CreateOptionsForm = function(mainMenu, content, options, optionEleme
                 input:SetOptions(option.values)
             end                
         elseif option.type == "slider" then
+            --Todo: This should be replaced with a proper SlideBar class ...
+
             input = form:CreateFormElement(Form.kElementType.SlideBar, option.name, option.value)
             input_display = form:CreateFormElement(Form.kElementType.TextInput, option.name, option.value)
             input_display:SetNumbersOnly(true)    
@@ -1400,19 +1409,25 @@ GUIMainMenu.CreateOptionsForm = function(mainMenu, content, options, optionEleme
                         input:SetValue(input_display:GetValue())
                     elseif option.name == "FOVAdjustment" then
                         input:SetValue(input_display:GetValue() / 20)
+                    elseif option.name == "Gamma" then
+                        input:SetValue((input_display:GetValue() - Client.MinRenderGamma) /
+                                (Client.MaxRenderGamma - Client.MinRenderGamma))
                     else
                         input:SetValue(input_display:GetValue())
                     end
                 end
                 if input_display:GetValue() == "" or input_display:GetValue() == "." then
                     if option.name == "Sensitivity" then
-                        input_display:SetValue(ToString(string.sub(OptionsDialogUI_GetMouseSensitivity(), 0, 4)))
+                        input_display:SetValue(string.sub(OptionsDialogUI_GetMouseSensitivity(), 0, 4))
                     elseif option.name == "AccelerationAmount" then
-                        input_display:SetValue(ToString(string.sub(input:GetValue(), 0, 4)))
+                        input_display:SetValue(string.sub(input:GetValue(), 0, 4))
                     elseif option.name == "FOVAdjustment" then
-                        input_display:SetValue(ToString(string.format("%.0f", input:GetValue() * 20)))
+                        input_display:SetValue(string.format("%.0f", input:GetValue() * 20))
+                    elseif option.name == "Gamma" then
+                        input_display:SetValue(string.format("%.1f", Client.MinRenderGamma + input:GetValue() *
+                            (Client.MaxRenderGamma - Client.MinRenderGamma)))
                     else
-                        input_display:SetValue(ToString(string.sub(input:GetValue(),0, 4)))
+                        input_display:SetValue(string.sub(input:GetValue(),0, 4))
                     end
                 end
             
@@ -1425,6 +1440,9 @@ GUIMainMenu.CreateOptionsForm = function(mainMenu, content, options, optionEleme
                         input:SetValue(input_display:GetValue())
                     elseif option.name == "FOVAdjustment" then
                         input:SetValue(input_display:GetValue() / 20)
+                    elseif option.name == "Gamma" then
+                        input:SetValue((input_display:GetValue() - Client.MinRenderGamma) /
+                                (Client.MaxRenderGamma - Client.MinRenderGamma))
                     else
                         input:SetValue(input_display:GetValue())
                     end
@@ -1432,13 +1450,16 @@ GUIMainMenu.CreateOptionsForm = function(mainMenu, content, options, optionEleme
                 
                 if input_display:GetValue() == "" or input_display:GetValue() == "." then
                     if option.name == "Sensitivity" then
-                        input_display:SetValue(ToString(string.sub(OptionsDialogUI_GetMouseSensitivity(), 0, 4)))
+                        input_display:SetValue(string.sub(OptionsDialogUI_GetMouseSensitivity(), 0, 4))
                     elseif option.name == "AccelerationAmount" then
-                        input_display:SetValue(ToString(string.sub(input:GetValue(), 0, 4)))
+                        input_display:SetValue(string.sub(input:GetValue(), 0, 4))
                     elseif option.name == "FOVAdjustment" then
-                        input_display:SetValue(ToString(string.format("%.0f", input:GetValue() * 20)))
+                        input_display:SetValue(string.format("%.0f", input:GetValue() * 20))
+                    elseif option.name == "Gamma" then
+                        input_display:SetValue(string.format("%.1f", Client.MinRenderGamma + input:GetValue() *
+                                (Client.MaxRenderGamma - Client.MinRenderGamma)))
                     else
-                        input_display:SetValue(ToString(string.sub(input:GetValue(),0, 4)))
+                        input_display:SetValue(ToString(string.sub(input:GetValue(), 0, 4)))
                     end
                 end
             end,
@@ -1450,13 +1471,16 @@ GUIMainMenu.CreateOptionsForm = function(mainMenu, content, options, optionEleme
                         function(value, interest)
                             option.sliderCallback(mainMenu)
                             if option.name == "Sensitivity" then
-                                input_display:SetValue(ToString(string.sub(OptionsDialogUI_GetMouseSensitivity(), 0, 4)))
+                                input_display:SetValue(string.sub(OptionsDialogUI_GetMouseSensitivity(), 0, 4))
                             elseif option.name == "AccelerationAmount" then
-                                input_display:SetValue(ToString(string.sub(input:GetValue(), 0, 4)))
+                                input_display:SetValue(string.sub(input:GetValue(), 0, 4))
                             elseif option.name == "FOVAdjustment" then
-                                input_display:SetValue(ToString(string.format("%.0f", input:GetValue() * 20)))
+                                input_display:SetValue(string.format("%.0f", input:GetValue() * 20))
+                            elseif option.name == "Gamma" then
+                                input_display:SetValue(string.format("%.1f", Client.MinRenderGamma + input:GetValue() *
+                                        (Client.MaxRenderGamma - Client.MinRenderGamma)))
                             else
-                                input_display:SetValue(ToString(string.sub(input:GetValue(),0, 4)))
+                                input_display:SetValue(string.sub(input:GetValue(),0, 4))
                             end
                         end
                     }, SLIDE_HORIZONTAL)
@@ -1863,6 +1887,8 @@ local function InitOptions(optionElements)
     local rookieMode            = Client.GetOptionBoolean( kRookieOptionsKey, true )
     local physicsMultithreading = Client.GetOptionBoolean( "physicsMultithreading", false)
     local resourceLoading       = Client.GetOptionInteger("system/resourceLoading", 1)
+    local menuBackground        = Client.GetOptionInteger("menu/menuBackground", 1)
+    local menuMusic             = Client.GetOptionInteger("menu/menuMusic", 1)
     
     local screenResIdx          = OptionsDialogUI_GetScreenResolutionsIndex()
     local visualDetailIdx       = OptionsDialogUI_GetVisualDetailSettingsIndex()
@@ -1889,6 +1915,10 @@ local function InitOptions(optionElements)
     local hudmode = Client.GetOptionInteger("hudmode", kHUDMode.Full)
         
     local lightQuality = Client.GetOptionInteger("graphics/lightQuality", 2)
+
+    local gamma = Clamp(Client.GetOptionFloat("graphics/display/gamma", Client.DefaultRenderGammaAdjustment),
+        Client.MinRenderGamma , Client.MaxRenderGamma)
+    gamma = (gamma - Client.MinRenderGamma) / (Client.MaxRenderGamma - Client.MinRenderGamma)
     
     -- support legacy values    
     if ambientOcclusion == "false" then
@@ -1963,25 +1993,28 @@ local function InitOptions(optionElements)
     optionElements.Reflections:SetOptionActive( BoolToIndex(reflections) )
     optionElements.FOVAdjustment:SetValue(fovAdjustment)
     optionElements.MinimapZoom:SetValue(minimapZoom)
-    optionElements.HitSoundVolume:SetValue(hitsoundVolume)
     optionElements.DecalLifeTime:SetValue(decalLifeTime)
     optionElements.CameraAnimation:SetOptionActive( BoolToIndex(cameraAnimation) )
     optionElements.PhysicsGpuAcceleration:SetOptionActive( BoolToIndex(physicsGpuAcceleration) )
     optionElements.ParticleQuality:SetOptionActive( table.find(kParticleQualityModes, particleQuality) ) 
     optionElements.TextureManagement:SetOptionActive( textureManagement )
+    optionElements.LightQuality:SetOptionActive( lightQuality )
+    optionElements.Gamma:SetValue(gamma)
+    optionElements.MenuBackground:SetOptionActive(menuBackground)
+    optionElements.MenuMusic:SetOptionActive(menuMusic)
     
     optionElements.SoundInputDevice:SetOptionActive(soundInputDevice)
     optionElements.SoundOutputDevice:SetOptionActive(soundOutputDevice)
     optionElements.SoundVolume:SetValue(soundVol)
     optionElements.MusicVolume:SetValue(musicVol)
     optionElements.VoiceVolume:SetValue(voiceVol)
-    optionElements.hudmode:SetValue(hudmode == 1 and Locale.ResolveString("HIGH") or Locale.ResolveString("LOW"))
-    optionElements.LightQuality:SetOptionActive( lightQuality )
-    
+    optionElements.HitSoundVolume:SetValue(hitsoundVolume)
     optionElements.RecordingGain:SetValue(recordingGain)
     optionElements.RecordingReleaseDelay:SetValue( recordingReleaseDelay )
-    
     optionElements.MuteWhenMinized:SetOptionActive( BoolToIndex(muteWhenMinized) )
+    
+    optionElements.hudmode:SetValue(hudmode == 1 and Locale.ResolveString("HIGH") or Locale.ResolveString("LOW"))
+    
 end
 
 local function SaveSecondaryGraphicsOptions(mainMenu)
@@ -2136,21 +2169,20 @@ local function SaveOptions(mainMenu)
     local anisotropicFiltering  = mainMenu.optionElements.AnisotropicFiltering:GetActiveOptionIndex() > 1
     local antiAliasing          = mainMenu.optionElements.AntiAliasing:GetActiveOptionIndex() > 1
     local textureManagement     = mainMenu.optionElements.TextureManagement:GetActiveOptionIndex()
-
-   
+    local lightQuality          = mainMenu.optionElements.LightQuality:GetActiveOptionIndex()
+    local particleQuality       = mainMenu.optionElements.ParticleQuality:GetActiveOptionIndex()
+    
     local soundVol              = mainMenu.optionElements.SoundVolume:GetValue() * 100
     local musicVol              = mainMenu.optionElements.MusicVolume:GetValue() * 100
     local voiceVol              = mainMenu.optionElements.VoiceVolume:GetValue() * 100
-
+    local muteWhenMinimized     = mainMenu.optionElements.MuteWhenMinized:GetActiveOptionIndex() > 1
+    
     local hudmode               = mainMenu.optionElements.hudmode:GetValue()
     local cameraAnimation       = mainMenu.optionElements.CameraAnimation:GetActiveOptionIndex() > 1
     local physicsGpuAcceleration = mainMenu.optionElements.PhysicsGpuAcceleration:GetActiveOptionIndex() > 1
     
-    local particleQuality       = mainMenu.optionElements.ParticleQuality:GetActiveOptionIndex()
-    
-    local lightQuality          = mainMenu.optionElements.LightQuality:GetActiveOptionIndex()
-    
-    local muteWhenMinimized = mainMenu.optionElements.MuteWhenMinized:GetActiveOptionIndex() > 1
+    local menuBackground        = mainMenu.optionElements.MenuBackground:GetActiveOptionIndex()
+    local menuMusic             = mainMenu.optionElements.MenuMusic:GetActiveOptionIndex()
     
     Client.SetOptionBoolean("input/mouse/rawinput", rawInput)
     Client.SetOptionBoolean("input/mouse/acceleration", mouseAcceleration)
@@ -2167,7 +2199,6 @@ local function SaveOptions(mainMenu)
     Client.SetOptionInteger("graphics/lightQuality", lightQuality)
     Client.SetOptionFloat("input/mouse/acceleration-amount", accelerationAmount)
     Client.SetOptionInteger("graphics/textureManagement", textureManagement)
-
     
     Client.SetOptionBoolean(kSoundMuteWhenMinized, muteWhenMinimized)
     
@@ -2232,6 +2263,16 @@ local function SaveOptions(mainMenu)
         Client.RestartMain()
     end
     
+    if menuBackground ~= Client.GetOptionInteger("menu/menuBackground", 1) then
+        Client.SetOptionInteger("menu/menuBackground", menuBackground)
+        Client.RestartMain()
+    end
+    
+    if menuMusic ~= Client.GetOptionInteger("menu/menuMusic", 1) then
+        Client.SetOptionInteger("menu/menuMusic", menuMusic)
+        Client.RestartMain()
+    end
+    
 end
 
 local function StoreCameraAnimationOption(formElement)
@@ -2266,6 +2307,17 @@ local function OnDecalLifeTimeChanged(mainMenu)
 
     local value = mainMenu.optionElements.DecalLifeTime:GetValue()
     Client.SetOptionFloat("graphics/decallifetime", value)
+    
+end
+
+local function OnGammaChanged(mainMenu)
+
+    local value = mainMenu.optionElements.Gamma:GetValue()
+    value = Client.MinRenderGamma + value * ( Client.MaxRenderGamma  - Client.MinRenderGamma )
+
+    Client.SetOptionFloat("graphics/display/gamma", value)
+    Client.SetRenderGammaAdjustment(value)
+    Render_SyncRenderOptions()
     
 end
 
@@ -2526,6 +2578,21 @@ function GUIMainMenu:CreateOptionWindow()
                 type    = "select",
                 values  = {  Locale.ResolveString("LOW"), Locale.ResolveString("MEDIUM"), Locale.ResolveString("HIGH")  },
             },
+            {
+                name    = "MenuBackground",
+                label   = Locale.ResolveString("MENU_BACKGROUND"),
+                tooltip = Locale.ResolveString("OPTION_MENU_BACKGROUND"),
+                type    = "select",
+                values  = menuBackgroundList, 
+            },
+            {
+                name    = "MenuMusic",
+                label   = Locale.ResolveString("MENU_MUSIC"),
+                tooltip = Locale.ResolveString("OPTION_MENU_MUSIC"),
+                type    = "select",
+                values  = menuMusicList, 
+            },
+            
         }
 
     local soundOptions =
@@ -2736,6 +2803,12 @@ function GUIMainMenu:CreateOptionWindow()
                 type    = "select",
                 values  = { Locale.ResolveString("MINIMAL"), Locale.ResolveString("RICH") },
                 callback = autoApplyCallback
+            },
+            {
+                name    = "Gamma",
+                label   = Locale.ResolveString("OPTION_GAMMA"),
+                type    = "slider",
+                sliderCallback = OnGammaChanged,
             },
         }
         
@@ -3155,11 +3228,10 @@ function GUIMainMenu:OnResolutionChanged(oldX, oldY, newX, newY)
 end
 
 function GUIMainMenu:UpdateRestartMessage()
-    
+
     local needsRestart = not Client.GetIsSoundDeviceValid(Client.SoundDeviceType_Input) or
                          not Client.GetIsSoundDeviceValid(Client.SoundDeviceType_Output) or
                          Client.GetRenderDeviceName() ~= Client.GetOptionString("graphics/device", "")
-        
     if needsRestart then
         self.warningLabel:SetText(Locale.ResolveString("GAME_RESTART_REQUIRED"))
         self.warningLabel:SetIsVisible(true)    
