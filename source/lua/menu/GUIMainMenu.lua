@@ -113,7 +113,7 @@ function GUIMainMenu:Initialize()
     GUIAnimatedScript.Initialize(self)
 
     Shared.Message("Main Menu Initialized at Version: " .. Shared.GetBuildNumber())
-    Shared.Message("Steam Id: " .. Client.GetSteamId())    
+    Shared.Message("Steam Id: " .. Client.GetSteamId())
     FastJoin.init(kAutoJoinUpdateDelay) -- FastJoin edit
     --provides a set of functions required for window handling
     AddMenuMixin(self)
@@ -2946,7 +2946,7 @@ function GUIMainMenu:Update(deltaTime)
                     MainMenu_JoinSelected()
                     self.autoJoinWindow:SetIsVisible(false)
                     
-                end                
+                end
                 
             end
             

@@ -30,9 +30,9 @@ function FastJoin.init(delay)
     Client.PrecacheLocalSound(FastJoin.joiningSound)
 end
 
-function FastJoin.playSound(sound)
-    FastJoin.debug("playing sound '" .. sound .. "'")
-    MenuManager.PlaySound(sound)
+function FastJoin.playSound(filename)
+    FastJoin.debug("playing sound '" .. filename .. "'")
+    StartSoundEffect(filename)
 end
 
 function FastJoin.playReloading()
