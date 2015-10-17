@@ -1,11 +1,11 @@
-// ======= Copyright (c) 2003-2014, Unknown Worlds Entertainment, Inc. All rights reserved. =====
-//
-// lua\menu\GUIMainMenu.lua
-//
-//    Created by:   Andreas Urwalek (andi@unknownworld.com) and
-//                  Brian Cronin (brianc@unknownworlds.com)
-//
-// ========= For more information, visit us at http://www.unknownworlds.com =====================
+-- ======= Copyright (c) 2003-2014, Unknown Worlds Entertainment, Inc. All rights reserved. =====
+--
+-- lua\menu\GUIMainMenu.lua
+--
+--    Created by:   Andreas Urwalek (andi@unknownworld.com) and
+--                  Brian Cronin (brianc@unknownworlds.com)
+--
+-- ========= For more information, visit us at http://www.unknownworlds.com =====================
  
 Script.Load("lua/menu/WindowManager.lua")
 Script.Load("lua/GUIAnimatedScript.lua")
@@ -28,7 +28,7 @@ Script.Load("lua/menu/MenuPoses.lua")
 Script.Load("lua/HitSounds.lua")
 
 -- FastJoin edit <<START>>
-local kAutoJoinUpdateDelay = 1 // default is 10
+local kAutoJoinUpdateDelay = 0.1 // default is 0.5
 Script.Load("lua/FastJoin/FastJoin.lua")
 -- FastJoin edit <<END>>
 
@@ -180,7 +180,7 @@ function GUIMainMenu:Initialize()
                 MainMenu_ReturnToGame()
                 ClientUI.EvaluateUIVisibility(Client.GetLocalPlayer())
                 
-                //Clear active element which caused mouse wheel to not register events
+                --Clear active element which caused mouse wheel to not register events
                 GetWindowManager():SetElementInactive()
                 
                 return true
@@ -272,8 +272,10 @@ function GUIMainMenu:Initialize()
                     obj.skill = obj.skill or 0
                     obj.level = obj.level or 0
 
-                    Client.SetOptionFloat("player-skill", tonumber(obj.skill))
-                    Client.SetOptionInteger("player-ranking", obj.level)
+                    if gMainMenu then
+                        gMainMenu.playerSkill = obj.skill
+                        gMainMenu.playerLevel = obj.level
+                    end
                 
                 end
             end
@@ -293,7 +295,7 @@ function GUIMainMenu:SetShowWindowName(name)
     
 end
 
-function GUIMainMenu:CreateMainLink(text, linkNum,OnClick)
+function GUIMainMenu:CreateMainLink(text, linkNum, OnClick)
     
     local cssClass = MainMenu_IsInGame() and "ingame" or "mainmenu"
     local mainLink = CreateMenuElement(self.menuBackground, "Link")
@@ -350,7 +352,7 @@ function GUIMainMenu:Uninitialize()
         
     end
     
-    if self.optionsTooltip then
+    if self.optionTooltip then
     
         GetGUIManager():DestroyGUIScript(self.optionTooltip)
         self.optionTooltip = nil
@@ -835,7 +837,7 @@ local function CreateFilterForm(self)
     description:SetText(Locale.ResolveString("SERVERBROWSER_MAPNAME"))
     description:SetCSSClass("filter_description")
     
-    self.filterPerformance = self.filterForm:CreateFormElement(Form.kElementType.DropDown, Locale.ResolveString("SERVERBROWSER_PERF"), "")
+    self.filterPerformance = self.filterForm:CreateFormElement(Form.kElementType.DropDown, Locale.ResolveString("SERVERBROWSER_PERF"))
     self.filterPerformance:SetOptions(ServerPerformanceData.GetPerformanceLevelNames())
     self.filterPerformance:SetCSSClass("filter_performance")
     self.filterPerformance:AddSetValueCallback( function(self)
@@ -975,17 +977,17 @@ local function ModDetailsCallback(modId, title, description)
 end
 
 local function GetPerformanceTextFromIndex(serverIndex)
-    local performanceQuality = Client.GetServerPerformanceQuality(serverIndex);
-    local performanceScore = Client.GetServerPerformanceScore(serverIndex);
+    local performanceQuality = Client.GetServerPerformanceQuality(serverIndex)
+    local performanceScore = Client.GetServerPerformanceScore(serverIndex)
     local str = ServerPerformanceData.GetPerformanceText(performanceQuality, performanceScore)
-    return string.format("%s %s(Score %d, Quality %d)", Locale.ResolveString("SERVERBROWSER_SERVER_DETAILS_PERF"), str, performanceScore, performanceQuality)
+    return string.format("%s %s (Score %d, Quality %d)", Locale.ResolveString("SERVERBROWSER_SERVER_DETAILS_PERF"), str, performanceScore, performanceQuality)
 end
   
 local function GetPerformanceText(serverData)
     local performanceQuality = serverData.performanceQuality
     local performanceScore = serverData.performanceScore
     local str = ServerPerformanceData.GetPerformanceText(serverData.performanceQuality, serverData.performanceScore)
-    return string.format("%s %s(Score %d, Quality %d)", Locale.ResolveString("SERVERBROWSER_SERVER_DETAILS_PERF"), str, performanceScore, performanceQuality)
+    return string.format("%s %s (Score %d, Quality %d)", Locale.ResolveString("SERVERBROWSER_SERVER_DETAILS_PERF"), str, performanceScore, performanceQuality)
 end
 
 function GUIMainMenu:CreateServerDetailsWindow()
@@ -1102,7 +1104,7 @@ function GUIMainMenu:CreateServerDetailsWindow()
              local serverName = FormatServerName(Client.GetServerName(self.serverIndex), Client.GetServerHasTag(self.serverIndex, "rookie"))
     
              self.serverName:SetText(serverName)
-             self.serverAddress:SetText(string.format("%s %s", Locale.ResolveString("SERVERBROWSER_SERVER_DETAILS_ADDRESS"), ToString(Client.GetServerAddress(self.serverIndex))))
+             self.serverAddress:SetText(string.format("%s %s", Locale.ResolveString("SERVERBROWSER_SERVER_DETAILS_ADDRESS"), ToString(GetServerAddress(self.serverIndex))))
              
              local numReservedSlots = GetNumServerReservedSlots(self.serverIndex)
              self.playerCount:SetText(string.format("%s %d / %d", Locale.ResolveString("SERVERBROWSER_SERVER_DETAILS_PLAYERS"), Client.GetServerNumPlayers(self.serverIndex), (Client.GetServerMaxPlayers(self.serverIndex) - numReservedSlots)))
@@ -1530,7 +1532,7 @@ GUIMainMenu.CreateOptionsForm = function(mainMenu, content, options, optionEleme
                         end
                     end    
                 end,
-                
+              
                 OnMouseOut = function(self)
                     if gMainMenu ~= nil then
                         gMainMenu.optionTooltip:Hide()
@@ -1879,12 +1881,11 @@ local function InitOptions(optionElements)
     local mouseAcceleration     = Client.GetOptionBoolean("input/mouse/acceleration", false)
     local accelerationAmount    = (Client.GetOptionFloat("input/mouse/acceleration-amount", 1) - kMinAcceleration) / (kMaxAcceleration -kMinAcceleration)
     local invMouse              = OptionsDialogUI_GetMouseInverted()
-    local rawInput              = Client.GetOptionBoolean("input/mouse/rawinput", false)
+    local rawInput              = Client.GetOptionBoolean("input/mouse/rawinput", true)
     local locale                = Client.GetOptionString( "locale", "enUS" )
     local showHints             = Client.GetOptionBoolean( "showHints", true )
     local showCommanderHelp     = Client.GetOptionBoolean( "commanderHelp", true )
     local drawDamage            = Client.GetOptionBoolean( "drawDamage", true )
-    local rookieMode            = Client.GetOptionBoolean( kRookieOptionsKey, true )
     local physicsMultithreading = Client.GetOptionBoolean( "physicsMultithreading", false)
     local resourceLoading       = Client.GetOptionInteger("system/resourceLoading", 1)
     local menuBackground        = Client.GetOptionInteger("menu/menuBackground", 1)
@@ -1908,11 +1909,12 @@ local function InitOptions(optionElements)
     local physicsGpuAcceleration = Client.GetOptionBoolean(kPhysicsGpuAccelerationKey, false)
     local decalLifeTime         = Client.GetOptionFloat("graphics/decallifetime", 0.2)
     local textureManagement     = Client.GetOptionInteger("graphics/textureManagement", 0)
+    local atmoDensity           = Client.GetOptionFloat("graphics/atmospheric-density", 1.0)
 
-    local minimapZoom = Client.GetOptionFloat("minimap-zoom", 0.75)
-    local hitsoundVolume = Client.GetOptionFloat("hitsound-vol", 0.0)
+    local minimapZoom           = Client.GetOptionFloat("minimap-zoom", 0.75)
+    local hitsoundVolume        = Client.GetOptionFloat("hitsound-vol", 0.0)
     
-    local hudmode = Client.GetOptionInteger("hudmode", kHUDMode.Full)
+    local hudmode               = Client.GetOptionInteger("hudmode", kHUDMode.Full)
         
     local lightQuality = Client.GetOptionInteger("graphics/lightQuality", 2)
 
@@ -1973,7 +1975,6 @@ local function InitOptions(optionElements)
     optionElements.ShowHints:SetOptionActive( BoolToIndex(showHints) )
     optionElements.ShowCommanderHelp:SetOptionActive( BoolToIndex(showCommanderHelp) )
     optionElements.DrawDamage:SetOptionActive( BoolToIndex(drawDamage) )
-    optionElements.RookieMode:SetOptionActive( BoolToIndex(rookieMode) )
     optionElements.PhysicsMultithreading:SetOptionActive( BoolToIndex(physicsMultithreading) )
     optionElements.ResourceLoading:SetOptionActive( resourceLoading )
 
@@ -1986,6 +1987,7 @@ local function InitOptions(optionElements)
     optionElements.Infestation:SetOptionActive( table.find(kInfestationModes, infestation) )
     optionElements.Bloom:SetOptionActive( BoolToIndex(bloom) )
     optionElements.Atmospherics:SetOptionActive( BoolToIndex(atmospherics) )
+    optionElements.AtmosphericDensity:SetValue(atmoDensity)
     optionElements.AnisotropicFiltering:SetOptionActive( BoolToIndex(anisotropicFiltering) )
     optionElements.AntiAliasing:SetOptionActive( BoolToIndex(antiAliasing) )
     optionElements.Detail:SetOptionActive(visualDetailIdx)
@@ -2151,7 +2153,6 @@ local function SaveOptions(mainMenu)
     local showHints             = mainMenu.optionElements.ShowHints:GetActiveOptionIndex() > 1
     local showCommanderHelp     = mainMenu.optionElements.ShowCommanderHelp:GetActiveOptionIndex() > 1
     local drawDamage            = mainMenu.optionElements.DrawDamage:GetActiveOptionIndex() > 1
-    local rookieMode            = mainMenu.optionElements.RookieMode:GetActiveOptionIndex() > 1
     local physicsMultithreading = mainMenu.optionElements.PhysicsMultithreading:GetActiveOptionIndex() > 1
     local resourceLoading       = mainMenu.optionElements.ResourceLoading:GetActiveOptionIndex()
     
@@ -2178,6 +2179,7 @@ local function SaveOptions(mainMenu)
     local muteWhenMinimized     = mainMenu.optionElements.MuteWhenMinized:GetActiveOptionIndex() > 1
     
     local hudmode               = mainMenu.optionElements.hudmode:GetValue()
+    
     local cameraAnimation       = mainMenu.optionElements.CameraAnimation:GetActiveOptionIndex() > 1
     local physicsGpuAcceleration = mainMenu.optionElements.PhysicsGpuAcceleration:GetActiveOptionIndex() > 1
     
@@ -2189,7 +2191,6 @@ local function SaveOptions(mainMenu)
     Client.SetOptionBoolean("showHints", showHints)
     Client.SetOptionBoolean("commanderHelp", showCommanderHelp)
     Client.SetOptionBoolean("drawDamage", drawDamage)
-    Client.SetOptionBoolean(kRookieOptionsKey, rookieMode)
     Client.SetOptionBoolean("physicsMultithreading", physicsMultithreading)
     Client.SetOptionInteger("system/resourceLoading", resourceLoading);
     
@@ -2307,6 +2308,14 @@ local function OnDecalLifeTimeChanged(mainMenu)
 
     local value = mainMenu.optionElements.DecalLifeTime:GetValue()
     Client.SetOptionFloat("graphics/decallifetime", value)
+    
+end
+
+local function OnAtmosphericDensityChanged(mainMenu)
+
+    local value = mainMenu.optionElements.AtmosphericDensity:GetValue()
+    Client.SetOptionFloat("graphics/atmospheric-density", value)
+    EnableAtmosphericDensity()
     
 end
 
@@ -2522,13 +2531,7 @@ function GUIMainMenu:CreateOptionWindow()
                 tooltip = Locale.ResolveString("OPTION_DRAW_DAMAGE"),
                 type    = "select",
                 values  = { Locale.ResolveString("NO"), Locale.ResolveString("YES") }
-            },  
-            {
-                name    = "RookieMode",
-                label   = Locale.ResolveString("ROOKIE_MODE"),
-                type    = "select",
-                values  = { Locale.ResolveString("NO"), Locale.ResolveString("YES") }
-            },          
+            },
             { 
                 name    = "FOVAdjustment",
                 label   = Locale.ResolveString("FOV_ADJUSTMENT"),
@@ -2769,6 +2772,12 @@ function GUIMainMenu:CreateOptionWindow()
                 values  = { Locale.ResolveString("OFF"), Locale.ResolveString("ON") },
                 callback = autoApplyCallback
             },
+            {
+                name    = "AtmosphericDensity",
+                label   = Locale.ResolveString("ATMO_DENSITY"),
+                type    = "slider",
+                sliderCallback = OnAtmosphericDensityChanged,
+            },
             {   
                 name    = "AnisotropicFiltering",
                 label   = Locale.ResolveString("AF"),
@@ -2876,7 +2885,7 @@ function GUIMainMenu:CreateOptionWindow()
 end
 
 local kReplaceAlertMessage = { }
-kReplaceAlertMessage["Connection disallowed"] = Locale.ResolveString("SERVER_FULL")
+kReplaceAlertMessage["Connection disallowed"] = Locale.ResolveString("CONNECTION_DISALLOWED")
 function GUIMainMenu:Update(deltaTime)
 
     PROFILE("GUIMainMenu:Update")
@@ -2904,7 +2913,9 @@ function GUIMainMenu:Update(deltaTime)
             
             if self.currentAlertText then
             
-                if self.currentAlertText == Locale.ResolveString("SERVER_FULL") or self.currentAlertText == Locale.ResolveString("INCORRECT_PASSWORD") then
+                if self.currentAlertText == Locale.ResolveString("CONNECTION_DISALLOWED") or
+                        self.currentAlertText == Locale.ResolveString("SERVER_FULL") or
+                        self.currentAlertText == Locale.ResolveString("INCORRECT_PASSWORD") then
                     self:ActivatePlayWindow()
                 end
                 
@@ -2940,7 +2951,8 @@ function GUIMainMenu:Update(deltaTime)
 
         if self.menuBackground:GetIsVisible() then
             self.playerName:SetText(OptionsDialogUI_GetNickname())
-            self.rankLevel:SetText(string.format( Locale.ResolveString("MENU_LEVEL"), Client.GetOptionInteger("player-ranking", 0)))
+            self.rankLevel:SetText(string.format( Locale.ResolveString("MENU_LEVEL"),
+                self.playerLevel or Locale.ResolveString("HIVE_OFFLINE")))
         end
         
         if self.modsWindow and self.modsWindow:GetIsVisible() then
@@ -3006,8 +3018,9 @@ function GUIMainMenu:Update(deltaTime)
         end
         
         if self.updateAutoJoin then
-            
+        
             if not self.timeLastAutoJoinUpdate or self.timeLastAutoJoinUpdate + kAutoJoinUpdateDelay < Shared.GetTime() then -- FastJoin edit
+            
                 FastJoin.debug("Server refreshed (" .. Shared.GetTime() .. ")") -- FastJoin edit
                 FastJoin.playReloading() -- FastJoin edit
                 Client.RefreshServer(MainMenu_GetSelectedServer())
@@ -3218,13 +3231,7 @@ function GUIMainMenu:OnResolutionChanged(oldX, oldY, newX, newY)
     for _,window in ipairs(self.windows) do
         window:ReloadCSSClass()
     end
-    
-    -- this is a hack. fix reloading of slidebars instead
-    if self.generalForm then
-        self.generalForm:Uninitialize()
-        self.generalForm = CreateGeneralForm(self, self.optionWindow:GetContentBox())
-    end    
-    
+
 end
 
 function GUIMainMenu:UpdateRestartMessage()
@@ -3358,19 +3365,8 @@ function GUIMainMenu:ActivateCustomizeWindow()
 
 end
 
-function GUIMainMenu:OnPlayClicked(playNow)
-
-    local isRookie = Client.GetOptionBoolean( kRookieOptionsKey, true )
-    local doneTutorial = Client.GetOptionBoolean( "playedTutorial", false )
-    local stopNagging = Client.GetOptionBoolean( "disableTutorialNag", false )
-    local lastLoadedBuild = Client.GetOptionInteger("lastLoadedBuild", 0)
-
-    if not isRookie or doneTutorial or stopNagging then
-        self:ActivatePlayWindow(playNow)
-        return
-    end
-
-    self.tutorialNagWindow = self:CreateWindow()  
+function GUIMainMenu:CreateTutorialNagWindow()
+    self.tutorialNagWindow = self:CreateWindow()
     self.tutorialNagWindow:SetWindowName("HINT")
     self.tutorialNagWindow:SetInitialVisible(true)
     self.tutorialNagWindow:SetIsVisible(true)
@@ -3379,8 +3375,9 @@ function GUIMainMenu:OnPlayClicked(playNow)
     self.tutorialNagWindow:DisableContentBox()
     self.tutorialNagWindow:SetCSSClass("tutnag_window")
     self.tutorialNagWindow:DisableCloseButton()
+    self.tutorialNagWindow:DisableTitleBar()
     self.tutorialNagWindow:SetLayer(kGUILayerMainMenuDialogs)
-    
+
     local hint = CreateMenuElement(self.tutorialNagWindow, "Font")
     hint:SetCSSClass("first_run_msg")
     hint:SetText(Locale.ResolveString("TUTNAG_MSG"))
@@ -3390,30 +3387,30 @@ function GUIMainMenu:OnPlayClicked(playNow)
     okButton:SetCSSClass("tutnag_play")
     okButton:SetText(Locale.ResolveString("TUTNAG_PLAY"))
     okButton:AddEventCallbacks({ OnClick = function()
-            self:DestroyWindow( self.tutorialNagWindow )
-            self.tutorialNagWindow = nil
-            self:StartTutorial()
-        end})
+        self:DestroyWindow( self.tutorialNagWindow )
+        self.tutorialNagWindow = nil
+        self:StartTutorial()
+    end})
 
     local skipButton = CreateMenuElement(self.tutorialNagWindow, "MenuButton")
     skipButton:SetCSSClass("tutnag_later")
-    skipButton:SetText(Locale.ResolveString("TUTNAG_LATER"))
+    skipButton:SetText(Locale.ResolveString("CANCEL"))
     skipButton:AddEventCallbacks({OnClick = function()
-            self:DestroyWindow( self.tutorialNagWindow )
-            self.tutorialNagWindow = nil
-            self:ActivatePlayWindow(playNow)
-        end})
+        self:DestroyWindow( self.tutorialNagWindow )
+        self.tutorialNagWindow = nil
+    end})
+end
 
-    skipButton = CreateMenuElement(self.tutorialNagWindow, "MenuButton")
-    skipButton:SetCSSClass("tutnag_stop")
-    skipButton:SetText(Locale.ResolveString("TUTNAG_STOP"))
-    skipButton:AddEventCallbacks({OnClick = function()
-            self:DestroyWindow( self.tutorialNagWindow )
-            self.tutorialNagWindow = nil
-            Client.SetOptionBoolean( "disableTutorialNag", true )
-            self:ActivatePlayWindow(playNow)
-        end})
+function GUIMainMenu:OnPlayClicked(playNow)
 
+    local isRookie = self.playerLevel and self.playerLevel < 1
+    local doneTutorial = Client.GetOptionBoolean( "playedTutorial", false )
+
+    if not isRookie or doneTutorial then
+        self:ActivatePlayWindow(playNow)
+    else
+        self:CreateTutorialNagWindow()
+    end
 end
 
 local LinkItems =
