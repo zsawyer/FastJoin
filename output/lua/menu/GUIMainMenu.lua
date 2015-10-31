@@ -2315,7 +2315,9 @@ local function OnAtmosphericDensityChanged(mainMenu)
 
     local value = mainMenu.optionElements.AtmosphericDensity:GetValue()
     Client.SetOptionFloat("graphics/atmospheric-density", value)
-    EnableAtmosphericDensity()
+    if Client and Client.lightList then
+        ApplyAtmosphericDensity()
+    end
     
 end
 
@@ -3299,7 +3301,7 @@ function GUIMainMenu:MaybeCreateModWarningWindow()
         self:DestroyWindow( self.modWarningWindow )
         self.modWarningWindow = nil
     end
-	
+    
     self.modWarningWindow = self:CreateWindow()  
     self.modWarningWindow:SetWindowName("HINT")
     self.modWarningWindow:SetInitialVisible(true)
@@ -3310,10 +3312,10 @@ function GUIMainMenu:MaybeCreateModWarningWindow()
     self.modWarningWindow:SetCSSClass("first_run_window")
     self.modWarningWindow:DisableCloseButton()
     self.modWarningWindow:SetLayer(kGUILayerMainMenuDialogs)
-	
+    
     local hint = CreateMenuElement(self.modWarningWindow, "Font")
     local okButton = CreateMenuElement(self.modWarningWindow, "MenuButton")
-	
+    
     hint:SetTextClipped( true, 450, 300 )
     hint:SetCSSClass("first_run_msg")
     okButton:SetCSSClass("first_run_ok")
@@ -3326,7 +3328,7 @@ function GUIMainMenu:MaybeCreateModWarningWindow()
             self.modWarningWindow = nil
         end})
 
-	MainMenu_OnTooltip()
+    MainMenu_OnTooltip()
 
 end
 
@@ -3387,17 +3389,21 @@ function GUIMainMenu:CreateTutorialNagWindow()
     okButton:SetCSSClass("tutnag_play")
     okButton:SetText(Locale.ResolveString("TUTNAG_PLAY"))
     okButton:AddEventCallbacks({ OnClick = function()
-        self:DestroyWindow( self.tutorialNagWindow )
-        self.tutorialNagWindow = nil
-        self:StartTutorial()
+        if self.tutorialNagWindow then
+            self:DestroyWindow( self.tutorialNagWindow )
+            self.tutorialNagWindow = nil
+            self:StartTutorial()
+        end
     end})
 
     local skipButton = CreateMenuElement(self.tutorialNagWindow, "MenuButton")
     skipButton:SetCSSClass("tutnag_later")
     skipButton:SetText(Locale.ResolveString("CANCEL"))
     skipButton:AddEventCallbacks({OnClick = function()
-        self:DestroyWindow( self.tutorialNagWindow )
-        self.tutorialNagWindow = nil
+        if self.tutorialNagWindow then
+            self:DestroyWindow( self.tutorialNagWindow )
+            self.tutorialNagWindow = nil
+        end
     end})
 end
 
