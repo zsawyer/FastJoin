@@ -1109,7 +1109,7 @@ function GUIMainMenu:CreateServerDetailsWindow()
              local numReservedSlots = GetNumServerReservedSlots(self.serverIndex)
              self.playerCount:SetText(string.format("%s %d / %d", Locale.ResolveString("SERVERBROWSER_SERVER_DETAILS_PLAYERS"), Client.GetServerNumPlayers(self.serverIndex), (Client.GetServerMaxPlayers(self.serverIndex) - numReservedSlots)))
              self.ping:SetText(string.format("%s %d", Locale.ResolveString("SERVERBROWSER_SERVER_DETAILS_PING"), Client.GetServerPing(self.serverIndex)))
-             self.gameMode:SetText(string.format("%s %s", Locale.ResolveString("SERVERBROWSER_SERVER_DETAILS_GAME"), FormatGameMode(Client.GetServerGameMode(self.serverIndex))))
+             self.gameMode:SetText(string.format("%s %s", Locale.ResolveString("SERVERBROWSER_SERVER_DETAILS_GAME"), FormatGameMode(Client.GetServerGameMode(self.serverIndex), Client.GetServerMaxPlayers(self.serverIndex))))
              self.map:SetText(string.format("%s %s",Locale.ResolveString("SERVERBROWSER_SERVER_DETAILS_MAP"), GetTrimmedMapName(Client.GetServerMapName(self.serverIndex))))
              
              self.performance:SetText( GetPerformanceTextFromIndex(self.serverIndex) )
@@ -3343,7 +3343,9 @@ function GUIMainMenu:ActivatePlayWindow(playNow)
         self:HideMenu()
     else
         self.playNowWindow:SetIsVisible(true)
+        self.playNowWindow:UpdateLogic(self)
     end
+
 
 end
 
@@ -3410,7 +3412,8 @@ end
 function GUIMainMenu:OnPlayClicked(playNow)
 
     local isRookie = self.playerLevel and self.playerLevel < 1
-    local doneTutorial = Client.GetOptionBoolean( "playedTutorial", false )
+    local doneTutorial = Client.GetOptionBoolean( "playedTutorial", false ) or
+            Client.GetOptionBoolean( "system/playedTutorial", false )
 
     if not isRookie or doneTutorial then
         self:ActivatePlayWindow(playNow)
@@ -3528,9 +3531,11 @@ local LinkItems =
 
         end    
     },
-    { "MENU_QUICK_JOIN", function(self)
+    { "MENU_PLAY_NOW", function(self)
 
             self.scriptHandle:OnPlayClicked(true)
+            --Counts the Play Now clicks
+            Shared.SendHTTPRequest("http://ns2.bplaced.net/quickjoin.php", "GET", {steamid = Client.GetSteamId()}, function() end)
 
         end
     }
@@ -3538,7 +3543,7 @@ local LinkItems =
 --Id of Links table is used to order links
 local LinkOrder =
 {
-    { 4,13,9,6,7,10,11,12 },
+    { 13,4,9,6,7,10,11,12 },
     { 1,2,3,4,9,6,7,8 }
 }
 
