@@ -7,5 +7,5 @@ description = [=[This mod shortens the update delay for auto joining server from
 
 It will also ping every second to let you know that auto-joining is still in progress. Once you start connecting a tone will signify that you are loading in now (note that this might get cut short if your PC is really fast with loading). This comes in handy when you are doing something else while waiting.]=]
 image       = "fastjoin.jpg"
-build = "279"
+build = "280"
 publish_id = "179abe23"
