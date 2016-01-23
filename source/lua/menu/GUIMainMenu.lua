@@ -28,6 +28,7 @@ Script.Load("lua/menu/MenuPoses.lua")
 Script.Load("lua/HitSounds.lua")
 
 -- FastJoin edit <<START>>
+-- "FastJoin edit" count in this file: 8
 local kAutoJoinUpdateDelay = 0.1 // default is 0.5
 Script.Load("lua/FastJoin/FastJoin.lua")
 -- FastJoin edit <<END>>
@@ -75,6 +76,8 @@ local kLocales =
         { name = "enUS", label = "English" },
         { name = "bgBG", label = "Bulgarian" },
         { name = "hrHR", label = "Croatian"},
+        { name = "zhCN", label = "Chinese (Simplified)" },
+        { name = "zhTW", label = "Chinese (Traditional)" },
         { name = "csCS", label = "Czech" },
         { name = "daDK", label = "Danish"},
         { name = "nlNL", label = "Dutch"},
@@ -82,15 +85,17 @@ local kLocales =
         { name = "frFR", label = "French" },       
         { name = "deDE", label = "German" },
         { name = "itIT", label = "Italian" },
+        { name = "jaJA", label = "Japanese" },
         { name = "koKR", label = "Korean" },
         { name = "noNO", label = "Norwegian" },
         { name = "plPL", label = "Polish" },
         { name = "ptBR", label = "Portuguese" },
+        { name = "roRO", label = "Romanian" },
         { name = "ruRU", label = "Russian" },
         { name = "rsRS", label = "Serbian" },
         { name = "esES", label = "Spanish" },
-        { name = "swSW", label = "Swedish" }
-    }    
+        { name = "swSW", label = "Swedish" },
+    }
 
 local gMainMenu
 function GetGUIMainMenu()
@@ -256,30 +261,32 @@ function GUIMainMenu:Initialize()
 
     local gPlayerData = {}
     local kPlayerRankingRequestUrl = "http://sabot.herokuapp.com/api/get/playerData/"
+    local function PlayerDataResponse(steamId)
+        return function (playerData)
 
-        local function PlayerDataResponse(steamId)
-            return function (playerData)
-        
-                PROFILE("PlayerRanking:PlayerDataResponse")
-                
-                local obj, pos, err = json.decode(playerData, 1, nil)
-                
-                if obj then
-                
-                    gPlayerData[steamId..""] = obj
-                
-                    -- its possible that the server does not send all data we want, need to check for nil here to not cause any script errors later:            
-                    obj.skill = obj.skill or 0
-                    obj.level = obj.level or 0
+            PROFILE("PlayerRanking:PlayerDataResponse")
 
-                    if gMainMenu then
-                        gMainMenu.playerSkill = obj.skill
-                        gMainMenu.playerLevel = obj.level
-                    end
-                
+            local obj, pos, err = json.decode(playerData, 1, nil)
+
+            if obj then
+
+                gPlayerData[steamId..""] = obj
+
+                -- its possible that the server does not send all data we want, need to check for nil here to not cause any script errors later:
+                obj.skill = obj.skill or 0
+                obj.level = obj.level or 0
+
+                if gMainMenu then
+                    gMainMenu.playerSkill = obj.skill
+                    gMainMenu.playerLevel = obj.level
+
+                    gMainMenu.rankLevel:SetText(string.format( Locale.ResolveString("MENU_LEVEL"),
+                        obj.level ))
                 end
+
             end
-       end
+        end
+   end
        
     local requestUrl = kPlayerRankingRequestUrl .. Client.GetSteamId()
     Shared.SendHTTPRequest(requestUrl, "GET", { }, PlayerDataResponse(Client.GetSteamId()))
@@ -403,9 +410,12 @@ function GUIMainMenu:CreateProfile()
     self.avatar:SetBackgroundTexture("*avatar")
     
     self.playerName = CreateMenuElement(self.profileBackground, "Link")
+    self.playerName:SetText(OptionsDialogUI_GetNickname())
     self.playerName:SetCSSClass("profile")
 
     self.rankLevel = CreateMenuElement(self.profileBackground, "Link")
+    self.rankLevel:SetText(string.format( Locale.ResolveString("MENU_LEVEL"),
+        self.playerLevel or Locale.ResolveString("HIVE_OFFLINE")))
     self.rankLevel:SetCSSClass("rank_level")
     
     eventCallbacks =
@@ -2951,11 +2961,8 @@ function GUIMainMenu:Update(deltaTime)
             end
         end
 
-        if self.menuBackground:GetIsVisible() then
-            self.playerName:SetText(OptionsDialogUI_GetNickname())
-            self.rankLevel:SetText(string.format( Locale.ResolveString("MENU_LEVEL"),
-                self.playerLevel or Locale.ResolveString("HIVE_OFFLINE")))
-        end
+        --Update name
+        self.playerName:SetText(OptionsDialogUI_GetNickname())
         
         if self.modsWindow and self.modsWindow:GetIsVisible() then
             self:UpdateModsWindow(self)
