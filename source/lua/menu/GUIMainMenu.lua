@@ -206,6 +206,7 @@ function GUIMainMenu:Initialize()
     self:CreateAlertWindow()
     self:CreatePlayerCountAlertWindow()
     self:CreateServerNetworkModedAlertWindow()
+    self:CreateRookieOnlyAlertWindow()
     self:CreatePlayWindow()    
     self.playWindow:SetIsVisible(false)
     
@@ -275,10 +276,12 @@ function GUIMainMenu:Initialize()
                 -- its possible that the server does not send all data we want, need to check for nil here to not cause any script errors later:
                 obj.skill = obj.skill or 0
                 obj.level = obj.level or 0
+                obj.score = obj.score or 0
 
                 if gMainMenu then
                     gMainMenu.playerSkill = obj.skill
                     gMainMenu.playerLevel = obj.level
+                    gMainMenu.playerScore = obj.score
 
                     gMainMenu.rankLevel:SetText(string.format( Locale.ResolveString("MENU_LEVEL"),
                         obj.level ))
@@ -458,7 +461,7 @@ local function AddFavoritesToServerList(serverList)
         serverEntry.address = currentFavorite.address or "127.0.0.1:27015"
         serverEntry.requiresPassword = currentFavorite.requiresPassword or false
         serverEntry.playerSkill = currentFavorite.playerSkill or 0
-        serverEntry.rookieFriendly = currentFavorite.rookieFriendly or false
+        serverEntry.rookieOnly = currentFavorite.rookieOnly or false
         serverEntry.gatherServer = currentFavorite.gatherServer or false
         serverEntry.friendsOnServer = false
         serverEntry.lanServer = false
@@ -472,7 +475,7 @@ local function AddFavoritesToServerList(serverList)
         serverEntry.favorite = currentFavorite.favorite
         serverEntry.history = currentFavorite.history
         
-        serverEntry.name = FormatServerName(serverEntry.name, serverEntry.rookieFriendly)
+        serverEntry.name = FormatServerName(serverEntry.name, serverEntry.rookieOnly)
         
         local function OnServerRefreshed(serverData)
             serverList:UpdateEntry(serverData)
@@ -534,6 +537,8 @@ function GUIMainMenu:ProcessJoinServer(pastWarning)
             self.playerCountAlertWindow:SetIsVisible(true)
         elseif MainMenu_GetSelectedIsNetworkModded() and (not pastWarning or pastWarning == 1) and not Client.GetOptionBoolean("never_show_snma", false) then
             self.serverNetworkModedAlertWindow:SetIsVisible(true)
+        elseif MainMenu_GetSelectedIsRookieOnly() and Client.GetLevel() >= kRookieLevel and (not pastWarning or pastWarning == 2) and not Client.GetOptionBoolean("never_show_roa", false) then
+            self.rookieOnlyAlertWindow:SetIsVisible(true)
         elseif MainMenu_GetSelectedRequiresPassword() then
             self.passwordPromptWindow:SetIsVisible(true)
         else
@@ -626,6 +631,60 @@ function GUIMainMenu:CreatePlayerCountAlertWindow()
         
     end)
     
+end
+
+function GUIMainMenu:CreateRookieOnlyAlertWindow()
+
+    self.rookieOnlyAlertWindow = self:CreateWindow()
+    self.rookieOnlyAlertWindow:SetWindowName(Locale.ResolveString("ALERT"))
+    self.rookieOnlyAlertWindow:SetInitialVisible(false)
+    self.rookieOnlyAlertWindow:SetIsVisible(false)
+    self.rookieOnlyAlertWindow:DisableResizeTile()
+    self.rookieOnlyAlertWindow:DisableSlideBar()
+    self.rookieOnlyAlertWindow:DisableContentBox()
+    self.rookieOnlyAlertWindow:SetCSSClass("warning_alert_window")
+    self.rookieOnlyAlertWindow:DisableCloseButton()
+    self.rookieOnlyAlertWindow:SetLayer(kGUILayerMainMenuDialogs)
+
+    self.rookieOnlyAlertWindow:AddEventCallbacks( { OnBlur = function(self) self:SetIsVisible(false) end } )
+
+    self.playerCountAlertText = CreateMenuElement(self.rookieOnlyAlertWindow, "Font")
+    self.playerCountAlertText:SetCSSClass("warning_alerttext")
+    self.playerCountAlertText:SetText(WordWrap(self.playerCountAlertText.text, Locale.ResolveString("ROOKIEONLYNAG_MSG"), 0, 460) )
+
+    local okButton = CreateMenuElement(self.rookieOnlyAlertWindow, "MenuButton")
+    okButton:SetCSSClass("warning_alert_join")
+    okButton:SetText(string.UTF8Upper(Locale.ResolveString("OK")))
+
+    local cancel = CreateMenuElement(self.rookieOnlyAlertWindow, "MenuButton")
+    cancel:SetCSSClass("warning_alert_cancle")
+    cancel:SetText(string.UTF8Upper(Locale.ResolveString("CANCEL")))
+
+    okButton:AddEventCallbacks({
+        OnClick = function (self)
+            self.scriptHandle.rookieOnlyAlertWindow:SetIsVisible(false)
+            self.scriptHandle:ProcessJoinServer( 3 )
+        end
+    })
+
+    cancel:AddEventCallbacks({
+        OnClick = function (self)
+            self.scriptHandle.rookieOnlyAlertWindow:SetIsVisible(false)
+        end
+    })
+
+    self.neverShow = CreateMenuElement(self.rookieOnlyAlertWindow, "Checkbox")
+    self.neverShow:SetCSSClass("never_show_again")
+    self.neverShow:SetChecked(Client.GetOptionBoolean("never_show_pca", false))
+    self.neverShowText = CreateMenuElement(self.rookieOnlyAlertWindow, "Font")
+    self.neverShowText:SetCSSClass("never_show_again_text")
+    self.neverShowText:SetText(Locale.ResolveString("NEVER_SHOW_AGAIN"))
+    self.neverShow:AddSetValueCallback(function(self)
+
+        Client.SetOptionBoolean("never_show_roa", true)
+
+    end)
+
 end
 
 function GUIMainMenu:CreateServerNetworkModedAlertWindow()
@@ -1111,7 +1170,7 @@ function GUIMainMenu:CreateServerDetailsWindow()
     
         if self.serverIndex > 0 then  
 
-             local serverName = FormatServerName(Client.GetServerName(self.serverIndex), Client.GetServerHasTag(self.serverIndex, "rookie"))
+             local serverName = FormatServerName(Client.GetServerName(self.serverIndex), Client.GetServerHasTag(self.serverIndex, "rookie_only"))
     
              self.serverName:SetText(serverName)
              self.serverAddress:SetText(string.format("%s %s", Locale.ResolveString("SERVERBROWSER_SERVER_DETAILS_ADDRESS"), ToString(GetServerAddress(self.serverIndex))))
@@ -3322,8 +3381,8 @@ function GUIMainMenu:MaybeCreateModWarningWindow()
     
     local hint = CreateMenuElement(self.modWarningWindow, "Font")
     local okButton = CreateMenuElement(self.modWarningWindow, "MenuButton")
-    
-    hint:SetTextClipped( true, 450, 300 )
+
+    hint:SetTextClipped( true, GUIScale(560), GUIScale(300))
     hint:SetCSSClass("first_run_msg")
     okButton:SetCSSClass("first_run_ok")
 
@@ -3376,7 +3435,51 @@ function GUIMainMenu:ActivateCustomizeWindow()
 
 end
 
+function GUIMainMenu:CreateRookieOnlyNagWindow()
+    self.rookieOnlyNagWindow = self:CreateWindow()
+    self.rookieOnlyNagWindow:SetWindowName("HINT")
+    self.rookieOnlyNagWindow:SetInitialVisible(true)
+    self.rookieOnlyNagWindow:SetIsVisible(true)
+    self.rookieOnlyNagWindow:DisableResizeTile()
+    self.rookieOnlyNagWindow:DisableSlideBar()
+    self.rookieOnlyNagWindow:DisableContentBox()
+    self.rookieOnlyNagWindow:SetCSSClass("tutnag_window")
+    self.rookieOnlyNagWindow:DisableCloseButton()
+    self.rookieOnlyNagWindow:DisableTitleBar()
+    self.rookieOnlyNagWindow:SetLayer(kGUILayerMainMenuDialogs)
+
+    local hint = CreateMenuElement(self.rookieOnlyNagWindow, "Font")
+    hint:SetCSSClass("first_run_msg")
+    hint:SetText(Locale.ResolveString("ROOKIEONLYNAG_MSG"))
+    hint:SetTextClipped( true, GUIScale(560), GUIScale(400))
+
+    local okButton = CreateMenuElement(self.rookieOnlyNagWindow, "MenuButton")
+    okButton:SetCSSClass("tutnag_play")
+    okButton:SetText(Locale.ResolveString("PLAY_NOW"))
+    okButton:AddEventCallbacks({ OnClick = function()
+        if self.rookieOnlyNagWindow then
+            self:DestroyWindow( self.rookieOnlyNagWindow )
+            self.rookieOnlyNagWindow = nil
+            self:ActivatePlayWindow(true)
+        end
+    end})
+
+    local skipButton = CreateMenuElement(self.rookieOnlyNagWindow, "MenuButton")
+    skipButton:SetCSSClass("tutnag_later")
+    skipButton:SetText(Locale.ResolveString("CANCEL"))
+    skipButton:AddEventCallbacks({OnClick = function()
+        if self.rookieOnlyNagWindow then
+            self:DestroyWindow( self.rookieOnlyNagWindow )
+            self.rookieOnlyNagWindow = nil
+        end
+    end})
+end
+
 function GUIMainMenu:CreateTutorialNagWindow()
+
+    --Don't recreate this windows if it's already visible
+    if self.tutorialNagWindow then return end
+
     self.tutorialNagWindow = self:CreateWindow()
     self.tutorialNagWindow:SetWindowName("HINT")
     self.tutorialNagWindow:SetInitialVisible(true)
@@ -3392,7 +3495,7 @@ function GUIMainMenu:CreateTutorialNagWindow()
     local hint = CreateMenuElement(self.tutorialNagWindow, "Font")
     hint:SetCSSClass("first_run_msg")
     hint:SetText(Locale.ResolveString("TUTNAG_MSG"))
-    hint:SetTextClipped( true, 400, 400 )
+    hint:SetTextClipped( true, GUIScale(560), GUIScale(400))
 
     local okButton = CreateMenuElement(self.tutorialNagWindow, "MenuButton")
     okButton:SetCSSClass("tutnag_play")
@@ -3402,6 +3505,18 @@ function GUIMainMenu:CreateTutorialNagWindow()
             self:DestroyWindow( self.tutorialNagWindow )
             self.tutorialNagWindow = nil
             self:StartTutorial()
+        end
+    end})
+
+
+    local playButton = CreateMenuElement(self.tutorialNagWindow, "MenuButton")
+    playButton:SetCSSClass("tutnag_playnow")
+    playButton:SetText(Locale.ResolveString("TUTNAG_PLAYNOW"))
+    playButton:AddEventCallbacks({ OnClick = function()
+        if self.tutorialNagWindow then
+            self:DestroyWindow( self.tutorialNagWindow )
+            self.tutorialNagWindow = nil
+            self:ActivatePlayWindow(true)
         end
     end})
 
