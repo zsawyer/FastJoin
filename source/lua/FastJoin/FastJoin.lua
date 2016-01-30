@@ -4,7 +4,7 @@ FastJoin = { }
 FastJoin.debugging = false
 
 FastJoin.modName = "FastJoin"
-FastJoin.build = "b0005"
+FastJoin.build = "b0008"
 FastJoin.msgPrefix = "[" .. FastJoin.modName .. "] "
 FastJoin.infoText = "not initialized" 
 FastJoin.joiningSound = "sound/NS2.fev/common/countdown"

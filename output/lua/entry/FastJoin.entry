@@ -1,3 +1,7 @@
-modEntry = [[
-    Priority: 1
-]]
+modEntry = {
+	Client = nil,
+	Server = nil,
+	Shared = nil,
+	FileHooks = "lua/FastJoin/FastJoin_FileHooks.lua",
+	Priority = 50
+}

@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <project>
   <file>
-    <filename>source\lua\menu\GUIMainMenu.lua</filename>
+    <filename>source\lua\entry\FastJoin.entry</filename>
+  </file>
+  <file>
+    <filename>source\lua\FastJoin\FastJoin.lua</filename>
+  </file>
+  <file>
+    <filename>source\lua\FastJoin\FastJoin_FileHooks.lua</filename>
+  </file>
+  <file>
+    <filename>source\lua\FastJoin\FastJoin_GUIMainMenuHooks.lua</filename>
   </file>
 </project>
